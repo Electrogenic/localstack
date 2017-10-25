@@ -284,8 +284,13 @@ def run_lambda(func, event, context, func_arn, suppress_output=False, async=Fals
                 taskdir = '/var/task'
                 event_file = 'event_file.json'
                 save_file(os.path.join(lambda_cwd, event_file), event_body)
-                handler_args = ("bash -c 'cd %s; java -cp .:`ls *.jar | tr \"\\n\" \":\"` \"%s\" \"%s\" \"%s\"'" %
-                    (taskdir, LAMBDA_EXECUTOR_CLASS, handler, event_file))
+                LAMBDA_DEBUG_PORT = os.getenv("LAMBDA_DEBUG_PORT", None)
+                if LAMBDA_DEBUG_PORT is None:
+                    handler_args = ("bash -c 'cd %s; java -cp .:`ls *.jar | tr \"\\n\" \":\"` \"%s\" \"%s\" \"%s\"'" %
+                        (taskdir, LAMBDA_EXECUTOR_CLASS, handler, event_file))
+                else:
+                    handler_args = ("bash -c 'cd %s; java -agentlib:jdwp=transport=dt_socket,server=y,suspend=y,quiet=y,address=%s -cp .:`ls *.jar | tr \"\\n\" \":\"` \"%s\" \"%s\" \"%s\"'" %
+                                    (taskdir, LAMBDA_DEBUG_PORT, LAMBDA_EXECUTOR_CLASS, handler, event_file))
                 entrypoint = ' --entrypoint ""'
 
             env_vars = ' '.join(['-e {}={}'.format(k, cmd_quote(v)) for (k, v) in environment.items()])
